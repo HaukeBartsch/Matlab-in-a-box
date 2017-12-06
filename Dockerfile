@@ -23,6 +23,7 @@ RUN apt-get update -qq && apt-get install -yq --no-install-recommends  \
     && localedef --force --inputfile=en_US --charmap=UTF-8 C.UTF-8 \
     && chmod 777 /opt && chmod a+s /opt \
     && mkdir -p /neurodocker \
+    && echo 'alias mat="/usr/local/matlab/bin/matlab -nodesktop -nodisplay -nosplash" >> /root/.bashrc;' >> $ND_ENTRYPOINT \
     && if [ ! -f "$ND_ENTRYPOINT" ]; then \
          echo '#!/usr/bin/env bash' >> $ND_ENTRYPOINT \
          && echo 'set +x' >> $ND_ENTRYPOINT \
@@ -32,9 +33,23 @@ RUN apt-get update -qq && apt-get install -yq --no-install-recommends  \
          && echo '    mkdir -p /usr/local/;' >> $ND_ENTRYPOINT \
          && echo '    echo "Copying existing Matlab (please be patient)...";' >> $ND_ENTRYPOINT \
          && echo '    rsync -av --info=name0 --info=progress2 /matlab /usr/local/;' >> $ND_ENTRYPOINT \
-         && echo '    echo "Now commit the current container image with: \n    docker commit $HOSTNAME bergen-matlab:matlab"; ' >> $ND_ENTRYPOINT \
+         && echo '    echo "Now commit the current container image with: \n    docker commit $HOSTNAME bmatlab:matlab"; ' >> $ND_ENTRYPOINT \
          && echo '    read -n 1 -p "Press Enter to Close" mainmenuinput; ' >> $ND_ENTRYPOINT \
-         && echo '    echo "Run with:\n\n   docker run -it bergen-matlab:matlab /bin/bash"; ' >> $ND_ENTRYPOINT \
+         && echo '    echo "Run with:\n\n   docker run -it bmatlab:matlab /bin/bash"; ' >> $ND_ENTRYPOINT \
+         && echo '  elif [ "$1" == "importScript" ]; then' >> $ND_ENTRYPOINT \
+         && echo '    echo "Create script folder in home...";' >> $ND_ENTRYPOINT \
+         && echo '    mkdir -p $HOME/script;' >> $ND_ENTRYPOINT \
+         && echo '    echo "Copying scripts (please be patient)...";' >> $ND_ENTRYPOINT \
+         && echo '    rsync -av --info=name0 --info=progress2 /scripts $HOME/;' >> $ND_ENTRYPOINT \
+         && echo '    echo "Now commit the current container image with: \n    docker commit $HOSTNAME bmatlab:script"; ' >> $ND_ENTRYPOINT \
+         && echo '    read -n 1 -p "Press Enter to Close" mainmenuinput; ' >> $ND_ENTRYPOINT \
+         && echo '    echo "Run with:\n\n   docker run -it -v /data:/data bmatlab:script"; ' >> $ND_ENTRYPOINT \
+         && echo '  elif [ "$1" == "--help" ]; then' >> $ND_ENTRYPOINT \
+         && echo '    echo "Usage:";' >> $ND_ENTRYPOINT \
+         && echo '    echo "  --help                    print this help";' >> $ND_ENTRYPOINT \
+         && echo '    echo "  importMatlab              copy an existing Matlab folder from /matlab into the container";' >> $ND_ENTRYPOINT \
+         && echo '    echo "  importScript              copy a Matlab script folder from /script into the container";' >> $ND_ENTRYPOINT \
+         && echo '    echo "";' >> $ND_ENTRYPOINT \
          && echo '  else $*;' >> $ND_ENTRYPOINT \
          && echo '  fi' >> $ND_ENTRYPOINT \
          && echo 'fi' >> $ND_ENTRYPOINT; \
@@ -42,7 +57,6 @@ RUN apt-get update -qq && apt-get install -yq --no-install-recommends  \
     && chmod -R 777 /neurodocker && chmod a+s /neurodocker
 ENTRYPOINT ["/neurodocker/startup.sh"]
 
-# Install MATLAB Compiler Runtime
 RUN apt-get update -qq && apt-get install -yq --no-install-recommends libxext6 libxt6 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
